@@ -20,7 +20,5 @@ setup(name='tracpreferencesfromldap',
       install_requires=[
           # -*- Extra requirements: -*-
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points={'trac.plugins': 'tracpreferencesfromldap = tracpreferencesfromldap.ldap_pref'}
       )
