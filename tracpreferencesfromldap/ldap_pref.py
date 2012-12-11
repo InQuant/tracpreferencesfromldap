@@ -47,14 +47,14 @@ class LdapPrefPlugin(Component):
 
     def get_ldap_data(self, authname):
         ldapdata = {
-                'server_host_name'  : '192.168.123.11',
-                'server_port'       : 8099,
-                'manager'           : 'cn=manager',
-                'manager_pwd'       : 'secret',
+                'server_host_name'  : self.env.config.get('ldappreferences', 'server_hostname'),
+                'server_port'       : self.env.config.get('ldappreferences', 'server_port'),
+                'manager'           : self.env.config.get('ldappreferences', 'manager'),
+                'manager_pwd'       : self.env.config.get('ldappreferences', 'manager_pwd'),
                 'ldapadd_cmd'       : 'ldapadd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapmodify_cmd'    : 'ldapmodify -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapsearch_cmd'    : 'ldapsearch -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
-                'root_dn'           : 'o=ptc',
+                'root_dn'           : 'o=%s' % o,
                 'ldapdelete_cmd'    : 'ldapdelete -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldappasswd_cmd'    : 'ldappasswd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s -s %(newpwd)s %(uid)s'
                 }
