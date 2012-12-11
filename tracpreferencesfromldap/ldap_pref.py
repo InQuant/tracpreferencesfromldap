@@ -52,8 +52,7 @@ class LdapPrefPlugin(Component):
                 'manager'           : self.env.config.get('ldappreferences', 'manager'),
                 'manager_pwd'       : self.env.config.get('ldappreferences', 'manager_pwd'),
                 'ldapadd_cmd'       : 'ldapadd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
-                # 'ldapmodify_cmd'    : 'ldapmodify -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
-                'ldapmodify_cmd'    : None,
+                'ldapmodify_cmd'    : 'ldapmodify -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapsearch_cmd'    : 'ldapsearch -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'root_dn'           : 'o=%s' % self.o,
                 'ldapdelete_cmd'    : 'ldapdelete -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
@@ -101,11 +100,7 @@ class LdapPrefPlugin(Component):
 
     # IRequestHandler methods
     def match_request(self, req):
-        from ipdb import set_trace; set_trace()
-        return True
-
-    def process_request(self, req):
-        from ipdb import set_trace; set_trace()
+        from ipdb import set_trace; set_trace() 
         if req.authname != 'anonymous':
             if self.is_update_needed(req.authname, 'name'):
                 data = self.get_ldap_data(req.authname)
@@ -119,3 +114,4 @@ class LdapPrefPlugin(Component):
                     self.update_settings(req.authname, 'email', data.get('mail'))
                 except:
                     pass
+        return False
