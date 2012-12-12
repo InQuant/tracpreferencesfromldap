@@ -2,7 +2,7 @@
 #
 #  File Name: file.py
 #  Creation Date: 2012 Jul 24
-#  Last Modified: 2012 Dez 11
+#  Last Modified: 2012 Dez 12
 
 #  Copyright (c) 2003-2012 InQuant GmbH
 #
@@ -26,26 +26,18 @@ __docformat__ = 'plaintext'
 
 # vim: set ft=python ts=4 sw=4 expandtab :
 from trac.core import *
-from trac.util.html import html
 from trac.web import IRequestHandler
-from trac.web.chrome import INavigationContributor
-from genshi.builder import tag
-from trac.util.translation import _
-from trac.web.api import IAuthenticator
-from trac.web.auth import LoginModule
 from trac.db import with_transaction
 
 import wcldapadmin
 
 class LdapPrefPlugin(Component):
-    implements(INavigationContributor, IRequestHandler)
+    implements(IRequestHandler)
 
     def __init__(self):
-        self.cn  = 'Windchill'
-        self.o   = 'ptc'
+        pass
 
     def get_ldap_data(self, authname):
-        from ipdb import set_trace; set_trace()
         ldapdata = {
                 'server_host_name'  : self.env.config.get('ldappreferences', 'server_hostname'),
                 'server_port'       : self.env.config.get('ldappreferences', 'server_port'),
@@ -54,12 +46,16 @@ class LdapPrefPlugin(Component):
                 'ldapadd_cmd'       : 'ldapadd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapmodify_cmd'    : 'ldapmodify -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapsearch_cmd'    : 'ldapsearch -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
-                'root_dn'           : 'o=%s' % self.o,
+                'root_dn'           : 'o=%s' % self.env.config.get('ldappreferences', 'root_dn'),
                 'ldapdelete_cmd'    : 'ldapdelete -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldappasswd_cmd'    : 'ldappasswd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s -s %(newpwd)s %(uid)s'
                 }
         ldap= wcldapadmin.WcLdapCmd(ldapdata)
-        dn= 'uid=%s,cn=%s,o=%s' % (authname, self.cn, self.o)
+        dn = "uid=%s," % authname
+        dn_elements = self.env.config.get('ldappreferences', 'dn').split(',')
+        for x in dn_elements:
+            dn += "%s=%s," % (x, self.env.config.get('ldappreferences', x))
+        dn = dn.strip(',')
         return ldap.getUser(dn)
 
     def update_settings(self, authname, field, value):
@@ -89,29 +85,12 @@ class LdapPrefPlugin(Component):
             ret = False
         return ret
 
-    # INavigationContributor methods
-    def get_active_navigation_item(self, req):
-        return 'tracpreferencesfromldap'
-
-    def get_navigation_items(self, req):
-        pass
-        # yield ('mainnav', 'tracpreferencesfromldap',
-        #     html.A('Hello world', href= req.href.tracpreferencesfromldap()))
-
     # IRequestHandler methods
     def match_request(self, req):
-        from ipdb import set_trace; set_trace() 
         if req.authname != 'anonymous':
             if self.is_update_needed(req.authname, 'name'):
                 data = self.get_ldap_data(req.authname)
-                try:
-                    self.update_settings(req.authname, 'name', data.get('cn'))
-                except:
-                    pass
+                self.update_settings(req.authname, 'name', data.get('cn'))
             if self.is_update_needed(req.authname, 'email'):
                 data = self.get_ldap_data(req.authname)
-                try:
-                    self.update_settings(req.authname, 'email', data.get('mail'))
-                except:
-                    pass
-        return False
+                self.update_settings(req.authname, 'email', data.get('mail'))
