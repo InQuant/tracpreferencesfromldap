@@ -46,17 +46,25 @@ class LdapPrefPlugin(Component):
                 'ldapadd_cmd'       : 'ldapadd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapmodify_cmd'    : 'ldapmodify -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldapsearch_cmd'    : 'ldapsearch -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
-                'root_dn'           : 'o=%s' % self.env.config.get('ldappreferences', 'root_dn'),
+                'root_dn'           : self.env.config.get('ldappreferences', 'root_dn'),
                 'ldapdelete_cmd'    : 'ldapdelete -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s',
                 'ldappasswd_cmd'    : 'ldappasswd -x -h %(host)s -p %(port)s -D "%(manager)s" -w %(manpwd)s -s %(newpwd)s %(uid)s'
                 }
-        ldap= wcldapadmin.WcLdapCmd(ldapdata)
-        dn = "uid=%s," % authname
-        dn_elements = self.env.config.get('ldappreferences', 'dn').split(',')
-        for x in dn_elements:
-            dn += "%s=%s," % (x, self.env.config.get('ldappreferences', x))
-        dn = dn.strip(',')
-        return ldap.getUser(dn)
+        try:
+            ldap = wcldapadmin.WcLdapCmd(ldapdata)
+        except wcldapadmin.WcLdapCmdException, wce:
+            self.log.error("Ldap Error: %s" % wce)
+            return None
+
+        search_filter= '(uid=%s)' % authname
+        result = []
+        result = ldap.searchUsers(search_filter)
+        if len(result) > 0:
+            self.log.debug("Found LDAP Results! Updating Data.")
+            return result.pop()
+        else:
+            self.log.debug("No LDAP Results! Not updating antything")
+            return None
 
     def update_settings(self, authname, field, value):
         @with_transaction(self.env)
@@ -73,13 +81,11 @@ class LdapPrefPlugin(Component):
         @with_transaction(self.env)
         def _getTestCases(db):
             c= db.cursor()
-
             c.execute(stmt)
             dbs.append(c.fetchone())
         ret = None
-        if len(dbs) < 1 or \
-                dbs.pop() == None:
-            #val = dbs.pop()[0]
+
+        if not dbs:
             ret = True # update is needed
         else:
             ret = False
@@ -87,10 +93,12 @@ class LdapPrefPlugin(Component):
 
     # IRequestHandler methods
     def match_request(self, req):
-        if req.authname != 'anonymous':
-            if self.is_update_needed(req.authname, 'name'):
-                data = self.get_ldap_data(req.authname)
-                self.update_settings(req.authname, 'name', data.get('cn'))
-            if self.is_update_needed(req.authname, 'email'):
-                data = self.get_ldap_data(req.authname)
-                self.update_settings(req.authname, 'email', data.get('mail'))
+        uid = req.authname
+        if uid == 'anonymous':
+            return
+        if self.is_update_needed(uid, 'name') or self.is_update_needed(uid, 'email'):
+            data = self.get_ldap_data(uid)
+            if data.get('cn'):
+                self.update_settings(uid, 'name', data.get('cn'))
+            if data.get('mail'):
+                self.update_settings(uid, 'email', data.get('mail'))
