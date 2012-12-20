@@ -58,7 +58,7 @@ class LdapPrefPlugin(Component):
 
         search_filter= '(uid=%s)' % authname
         result = []
-        result = ldap.searchUsers(search_filter)
+        result = ldap.searchUsers(search_filter=search_filter, keys= ['cn','uid','mail','dn','sn','givenName'])
         if len(result) > 0:
             self.log.debug("Found LDAP Results! Updating Data.")
             return result.pop()
@@ -113,6 +113,9 @@ class LdapPrefPlugin(Component):
             self.log.debug("Trying to fetch LDAP-Data")
             data = self.get_ldap_data(uid)
             if data.get('cn'):
-                self.update_settings(uid, 'name', data.get('cn'))
+                if data.get('sn') and data.get('givenName'):
+                    self.update_settings(uid, 'name', "%s %s" % (data.get('sn'), data.get('givenName')))
+                else:
+                    self.update_settings(uid, 'name', data.get('cn'))
             if data.get('mail'):
                 self.update_settings(uid, 'email', data.get('mail'))
