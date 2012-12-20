@@ -28,6 +28,7 @@ __docformat__ = 'plaintext'
 from trac.core import *
 from trac.web import IRequestHandler
 from trac.db import with_transaction
+from trac.web.session import Session
 
 import wcldapadmin
 
@@ -66,41 +67,20 @@ class LdapPrefPlugin(Component):
             self.log.debug("No LDAP Results! Not updating antything")
             return None
 
-    def update_settings(self, authname, field, value):
-        @with_transaction(self.env)
-        def _insertTestCase(db):
-            self.log.debug("Inserting Data:")
-            self.log.debug("Authname: %s" % authname)
-            self.log.debug("Field: %s" % field)
-            self.log.debug("Value: %s" % value)
-            c = db.cursor()
-            sql = "INSERT INTO \"session_attribute\" VALUES('%s',1,'%s','%s');" % (authname, field, value)
-            c.execute(sql)
+    def update_settings(self, req, field, value):
+        session = Session(self.env, req)
+        session[field] = value
+        session.save()
 
-    def is_update_needed(self, authname, field):
+    def is_update_needed(self, req, field):
         """Check if the setting is empty
         """
-        self.log.debug("Authname: %s" % authname)
         self.log.debug("Field: %s" % field)
-
-        stmt  = "SELECT value FROM session_attribute WHERE sid = '%s' and name = '%s' LIMIT 1;" % (authname, field)
-        self.log.debug("Select-Statement: %s" % stmt)
-        dbs = []
-        @with_transaction(self.env)
-        def _getTestCases(db):
-            c= db.cursor()
-            c.execute(stmt)
-            dbs.append(c.fetchone())
-        ret = None
-
-        self.log.debug("dbs: %s" % dbs)
-        if len(dbs) > 0 and dbs[0] == None:
-            ret = True # update is needed
-            self.log.debug("Update needed")
-        elif len(dbs) > 0 and dbs[0]:
-            ret = False
-            self.log.debug("No Update needed (there are already preferences set)")
-        return ret
+        session = Session(self.env, req)
+        if field in session:
+            return False
+        else:
+            return True
 
     # IRequestHandler methods
     def match_request(self, req):
@@ -109,13 +89,14 @@ class LdapPrefPlugin(Component):
             self.log.debug("Anonymous User - Not getting any Preferences")
             return
         self.log.debug("Logged-in User. Checking if an Update is needed")
-        if self.is_update_needed(uid, 'name') or self.is_update_needed(uid, 'email'):
+        from ipdb import set_trace; set_trace() 
+        if self.is_update_needed(req, 'name') or self.is_update_needed(req, 'email'):
             self.log.debug("Trying to fetch LDAP-Data")
             data = self.get_ldap_data(uid)
             if data.get('cn'):
                 if data.get('sn') and data.get('givenName'):
-                    self.update_settings(uid, 'name', "%s %s" % (data.get('sn'), data.get('givenName')))
+                    self.update_settings(req, 'name', "%s %s" % (data.get('sn'), data.get('givenName')))
                 else:
-                    self.update_settings(uid, 'name', data.get('cn'))
+                    self.update_settings(req, 'name', data.get('cn'))
             if data.get('mail'):
-                self.update_settings(uid, 'email', data.get('mail'))
+                self.update_settings(req, 'email', data.get('mail'))
