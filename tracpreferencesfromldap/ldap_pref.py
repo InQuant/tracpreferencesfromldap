@@ -89,14 +89,17 @@ class LdapPrefPlugin(Component):
             self.log.debug("Anonymous User - Not getting any Preferences")
             return
         self.log.debug("Logged-in User. Checking if an Update is needed")
-        from ipdb import set_trace; set_trace() 
         if self.is_update_needed(req, 'name') or self.is_update_needed(req, 'email'):
             self.log.debug("Trying to fetch LDAP-Data")
             data = self.get_ldap_data(uid)
-            if data.get('cn'):
-                if data.get('sn') and data.get('givenName'):
-                    self.update_settings(req, 'name', "%s %s" % (data.get('sn'), data.get('givenName')))
-                else:
-                    self.update_settings(req, 'name', data.get('cn'))
-            if data.get('mail'):
-                self.update_settings(req, 'email', data.get('mail'))
+            if data == None:
+                return
+            if 'cn' in data:
+                if data.get('cn'):
+                    if data.get('sn') and data.get('givenName'):
+                        self.update_settings(req, 'name', "%s %s" % (data.get('sn'), data.get('givenName')))
+                    else:
+                        self.update_settings(req, 'name', data.get('cn'))
+            if 'mail' in data:
+                if data.get('mail'):
+                    self.update_settings(req, 'email', data.get('mail'))
