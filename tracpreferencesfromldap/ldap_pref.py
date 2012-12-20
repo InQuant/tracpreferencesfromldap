@@ -87,8 +87,10 @@ class LdapPrefPlugin(Component):
 
         if not dbs:
             ret = True # update is needed
+            self.log.debug("No Update needed (there are already preferences set)")
         else:
             ret = False
+            self.log.debug("Update needed")
         return ret
 
     # IRequestHandler methods
