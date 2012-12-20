@@ -2,7 +2,7 @@
 #
 #  File Name: file.py
 #  Creation Date: 2012 Jul 24
-#  Last Modified: 2012 Dez 12
+#  Last Modified: 2012 Dez 20
 
 #  Copyright (c) 2003-2012 InQuant GmbH
 #
@@ -95,8 +95,11 @@ class LdapPrefPlugin(Component):
     def match_request(self, req):
         uid = req.authname
         if uid == 'anonymous':
+            self.log.debug("Anonymous User - Not getting any Preferences")
             return
+        self.log.debug("Logged-in User. Checking if an Update is needed")
         if self.is_update_needed(uid, 'name') or self.is_update_needed(uid, 'email'):
+            self.log.debug("Trying to fetch LDAP-Data")
             data = self.get_ldap_data(uid)
             if data.get('cn'):
                 self.update_settings(uid, 'name', data.get('cn'))
