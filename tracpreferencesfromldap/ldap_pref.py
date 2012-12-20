@@ -69,6 +69,10 @@ class LdapPrefPlugin(Component):
     def update_settings(self, authname, field, value):
         @with_transaction(self.env)
         def _insertTestCase(db):
+            self.log.debug("Inserting Data:")
+            self.log.debug("Authname: %s" % authname)
+            self.log.debug("Field: %s" % field)
+            self.log.debug("Value: %s" % value)
             c = db.cursor()
             sql = "INSERT INTO \"session_attribute\" VALUES('%s',1,'%s','%s');" % (authname, field, value)
             c.execute(sql)
@@ -76,7 +80,11 @@ class LdapPrefPlugin(Component):
     def is_update_needed(self, authname, field):
         """Check if the setting is empty
         """
+        self.log.debug("Authname: %s" % authname)
+        self.log.debug("Field: %s" % field)
+
         stmt  = "SELECT value FROM session_attribute WHERE sid = '%s' and name = '%s' LIMIT 1;" % (authname, field)
+        self.log.debug("Select-Statement: %s" % stmt)
         dbs = []
         @with_transaction(self.env)
         def _getTestCases(db):
@@ -85,12 +93,13 @@ class LdapPrefPlugin(Component):
             dbs.append(c.fetchone())
         ret = None
 
-        if not dbs:
+        self.log.debug("dbs: %s" % dbs)
+        if len(dbs) > 0 and dbs[0] == None:
             ret = True # update is needed
-            self.log.debug("No Update needed (there are already preferences set)")
-        else:
-            ret = False
             self.log.debug("Update needed")
+        elif len(dbs) > 0 and dbs[0]:
+            ret = False
+            self.log.debug("No Update needed (there are already preferences set)")
         return ret
 
     # IRequestHandler methods
